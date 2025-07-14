@@ -1,38 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { Loader } from './Loader';
 import { PeopleTable } from './PeopleTable';
-import { PeopleFromServer } from '../utils/fetchPeople';
 import { Person } from '../types';
 import { useParams } from 'react-router-dom';
+import { getPeople } from '../api';
 
 export const PeoplePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingError, setLoadingError] = useState(false);
-  const [people, setPeople] = useState<Person[] | null>(null);
+  const [people, setPeople] = useState<Person[]>([]);
   const { slug } = useParams();
+
+  const isServerEmpty = !people.length && !isLoading && !loadingError;
 
   const personToHighlight =
     people?.find(person => person.slug === slug) || null;
 
-  const getPeopleList = async () => {
-    try {
-      setLoadingError(false);
-      const data = await PeopleFromServer();
-
-      setPeople(data);
-    } catch {
-      setLoadingError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
     setIsLoading(true);
 
-    setTimeout(() => {
-      getPeopleList();
-    }, 0);
+    getPeople()
+      .then(setPeople)
+      .catch(() => setLoadingError(true))
+      .finally(() => setIsLoading(false));
   }, []);
 
   return (
@@ -43,13 +33,13 @@ export const PeoplePage: React.FC = () => {
         <div className="box table-container">
           {isLoading && <Loader />}
 
-          {loadingError && people === null && (
+          {loadingError && (
             <p data-cy="peopleLoadingError" className="has-text-danger">
               Something went wrong
             </p>
           )}
 
-          {people && people.length === 0 && (
+          {isServerEmpty && (
             <p data-cy="noPeopleMessage">There are no people on the server</p>
           )}
 
